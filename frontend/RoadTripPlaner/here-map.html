@@ -1,0 +1,36 @@
+<link rel="import" href="../components/polymer/polymer.html">
+
+<polymer-element name="here-map" attributes="">
+  <template>
+    <style>
+        :host {
+
+        }
+        #map {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+    <div id="map"></div>
+  </template>
+
+  <script>
+      Polymer({
+          publish: {},
+          ready: function() {
+              // Obtain the default map types from the platform object
+              var maptypes = document.platform.createDefaultLayers();
+
+              // Instantiate (and display) a map object:
+              var map = new H.Map(
+                  this.$.map,
+                  maptypes.normal.map,
+                  {
+                      zoom: 10,
+                      center: { lng: 13.4, lat: 52.51 }
+                  });
+          }
+      });
+  </script>
+</polymer-element>
