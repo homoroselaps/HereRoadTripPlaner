@@ -21,7 +21,8 @@
 
   <script>
       Polymer({
-          publish: {},
+          publish: {
+          },
           create: function() {
               this.sights = [];
               this.stops = [];
@@ -42,20 +43,21 @@
                   this.ui = H.ui.UI.createDefault(this.map, defaultLayers);
 
                   // Now use the map as required...
-                  this.moveMapToGeoCoord(13, 52, 14);
-                  this.map.addEventListener('tap', function (evt) {
+                  this.moveMapToGeoCoord(52, 13, 12);
+                document.viewModel.map = this.map;
+                  this.map.addEventListener("tap", function() { alert(true); }, false);
+                  document.viewModel.hereMap.addEventListener("tap", function (evt) {
                       var coords = this.map.screenToGeo(evt.currentPointer.viewportX, evt.currentPointer.viewportY);
-                      findNearestMarker(coords);
-                  }.bind(this), false);
-
+                      this.findNearestMarker(coords);
+                  }.bind(this), true);
           },
           findNearestMarker: function (coords) {
                   var minDist = 1000,
                     nearest_text = '*None*',
                     markerDist,
                     // get all objects added to the map
-                    objects = map.getObjects(),
-                    len = map.getObjects().length,
+                    objects = this.map.getObjects(),
+                    len = this.map.getObjects().length,
                     i;
 
                   // iterate over objects and calculate distance between them

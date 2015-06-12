@@ -57,9 +57,9 @@
             display: block;
             position: absolute;
             width: 20%;
-            height: 100%;
             top: 0px;
             left: 0px;
+            bottom: 0px;
             z-index: 10;
             background-color: rgba(238, 238, 236, 0.7);
             padding: 20px 10px 10px 10px;
@@ -194,7 +194,7 @@
             }
         });
 
-        this.document.viewModel.startRouting = function() {
+        document.viewModel.startRouting = function() {
             if (document.viewModel.endPosition[0] && document.viewModel.startPosition[0]) {
                 var router = document.platform.getRoutingService(),
                     parameters = {
@@ -215,7 +215,7 @@
                     });
             }
         }
-        this.document.viewModel.nextDay = function() {
+        document.viewModel.nextDay = function() {
             if (document.viewModel.endPosition[0] && document.viewModel.startPosition[0] && document.viewModel.duration > 0) {
                 var start = document.viewModel.stops.length > 0 ? document.viewModel.stops[document.viewModel.stops.length - 1] : document.viewModel.startPosition;
                 var end = document.viewModel.endPosition;
@@ -223,7 +223,7 @@
 
             }
         };
-        this.document.viewModel.sightscb = function (sights) {
+        document.viewModel.sightscb = function (sights) {
             document.viewModel.actualSights = sights;
             var markers = [];
             for (var s = 0; s < sights.length; s++) {
