@@ -199,3 +199,4 @@ FakesAssemblies/
 backend/build
 backend/.idea
 *__pycache__
+*migrations
