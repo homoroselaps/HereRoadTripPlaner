@@ -1,4 +1,5 @@
 <link rel="import" href="../components/polymer/polymer.html">
+<link rel="import" href="../components/polymer/polymer.html">
 
 <polymer-element name="here-map" attributes="">
   <template>
@@ -8,8 +9,11 @@
         }
         #map {
             display: block;
-            width: 100%;
-            height: 100%;
+            position: absolute;
+            top: 0px;
+            bottom: 0px;
+            left: 0px;
+            right: 0px;
         }
     </style>
     <div id="map"></div>
@@ -18,18 +22,82 @@
   <script>
       Polymer({
           publish: {},
-          ready: function() {
-              // Obtain the default map types from the platform object
-              var maptypes = document.platform.createDefaultLayers();
+          create: function() {
+              this.sights = [];
+              this.stops = [];
+          },
+          ready: function () {
+                  var defaultLayers = document.platform.createDefaultLayers();
 
-              // Instantiate (and display) a map object:
-              var map = new H.Map(
-                  this.$.map,
-                  maptypes.normal.map,
-                  {
-                      zoom: 10,
-                      center: { lng: 13.4, lat: 52.51 }
-                  });
+                  //Step 2: initialize a map  - not specificing a location will give a whole world view.
+                  this.map = new H.Map(this.$.map,
+                      defaultLayers.normal.map);
+
+                  //Step 3: make the map interactive
+                  // MapEvents enables the event system
+                  // Behavior implements default interactions for pan/zoom (also on mobile touch environments)
+                  this.behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(this.map));
+
+                  // Create the default UI components
+                  this.ui = H.ui.UI.createDefault(this.map, defaultLayers);
+
+                  // Now use the map as required...
+                  this.moveMapToGeoCoord(13, 52, 14);
+                  this.map.addEventListener('tap', function (evt) {
+                      var coords = this.map.screenToGeo(evt.currentPointer.viewportX, evt.currentPointer.viewportY);
+                      findNearestMarker(coords);
+                  }.bind(this), false);
+
+          },
+          findNearestMarker: function (coords) {
+                  var minDist = 1000,
+                    nearest_text = '*None*',
+                    markerDist,
+                    // get all objects added to the map
+                    objects = map.getObjects(),
+                    len = map.getObjects().length,
+                    i;
+
+                  // iterate over objects and calculate distance between them
+                  for (i = 0; i < len; i += 1) {
+                      markerDist = objects[i].getPosition().distance(coords);
+                      if (markerDist < minDist) {
+                          minDist = markerDist;
+                          nearest_text = objects[i].getData();
+                      }
+                  }
+                  alert('The nearest marker is: ' + nearest_text);
+          },
+          moveMapToGeoCoord: function(lat, lng, zoom) {
+              if (lng && lat) this.map.setCenter({ lat: lat, lng: lng });
+              if (zoom >= 0) this.map.setZoom(zoom);
+          },
+          zoomIntoGroup: function(markerArr) {
+              var group = new H.map.Group();
+              group.addObjects(markerArr);
+              this.map.addObject(group);
+              this.map.setViewBounds(group.getBounds());
+          },
+          addRouteShapeToMap: function(route) {
+              var strip = new H.geo.Strip(),
+                  routeShape = route.shape,
+                  polyline;
+
+              routeShape.forEach(function(point) {
+                  var parts = point.split(',');
+                  strip.pushLatLngAlt(parts[0], parts[1]);
+              });
+
+              polyline = new H.map.Polyline(strip, {
+                  style: {
+                      lineWidth: 4,
+                      strokeColor: 'rgba(0, 128, 255, 0.7)'
+                  }
+              });
+              // Add the polyline to the map
+              this.map.addObject(polyline);
+              // And zoom to its bounding rectangle
+              this.map.setViewBounds(polyline.getBounds(), true);
           }
       });
   </script>

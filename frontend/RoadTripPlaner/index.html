@@ -8,15 +8,25 @@
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
 
     <script src="../components/webcomponentsjs/webcomponents.js"></script>
-    <script src="http://js.api.here.com/v3/3.0/mapsjs-core.js"
-        type="text/javascript" charset="utf-8"></script>
+    <link rel="stylesheet" type="text/css"
+          href="https://js.api.here.com/v3/3.0/mapsjs-ui.css" />
+    <script type="text/javascript" charset="UTF-8"
+            src="https://js.api.here.com/v3/3.0/mapsjs-core.js"></script>
+    <script type="text/javascript" charset="UTF-8"
+            src="https://js.api.here.com/v3/3.0/mapsjs-service.js"></script>
+    <script type="text/javascript" charset="UTF-8"
+            src="https://js.api.here.com/v3/3.0/mapsjs-ui.js"></script>
+    <script type="text/javascript" charset="UTF-8"
+            src="https://js.api.here.com/v3/3.0/mapsjs-mapevents.js"></script>
     <script src="http://js.api.here.com/v3/3.0/mapsjs-service.js"
         type="text/javascript" charset="utf-8"></script>
 
     <link rel="import" href="../components/core-header-panel/core-header-panel.html">
     <link rel="import" href="../components/core-toolbar/core-toolbar.html">
     <link rel="import" href="../components/paper-tabs/paper-tabs.html">
+    <link rel="import" href="../components/paper-input/paper-input.html"/>
     <link rel="import" href="./here-map.html">
+    <link rel="import" href="./here-service.html">
 
     <style>
         html, body {
@@ -43,24 +53,25 @@
             user-select: none;
             text-transform: uppercase;
         }
-        .container {
-            width: 80%;
-            margin: 50px auto;
+        #sidebar {
+            display: block;
+            position: absolute;
+            width: 20%;
+            height: 100%;
+            top: 0px;
+            left: 0px;
+            z-index: 10;
+            background-color: rgba(238, 238, 236, 0.7);
+            padding: 20px 10px 10px 10px;
         }
-        @media (min-width: 481px) {
-            #tabs {
-                width: 200px;
-            }
-
-            .container {
-                width: 400px;
-            }
+        .sidebarEntry {
+            width: 100%;
         }
     </style>
 
 </head>
 
-<body unresolved fullbleed vertical layout>
+<body unresolved>
 
     <!--<core-header-panel>
 
@@ -74,15 +85,152 @@
         </core-toolbar>
     </core-header-panel>-->
 
-    <here-map fit></here-map>
+    <here-service id="here-service"></here-service>
+    <here-map id="here-map" fit></here-map>
+    <div id="sidebar" layout vertical>
+        <paper-input id="txtStart" floatinglabel class="sidebarEntry" label="Start Location" error-message="Invalid input!"></paper-input>
+        <paper-input id="txtEnd" floatinglabel class="sidebarEntry" label="End Location" error-message="Invalid input!"></paper-input>
+        <paper-input id="txtDuration" floatinglabel class="sidebarEntry" label="daily driving duration in hours" error-message="Invalid input!"></paper-input>
+    </div>
+    
 
 
-    <script>
+<script>
         // Initialize the platform object:
         document.platform = new H.service.Platform({
-            'app_id': ' XICryEiu3MwGTqoBqx8S',
-            'app_code': 'sEZSFHpqGqWcGX4gmWixlQ'
+            'app_id': 'XICryEiu3MwGTqoBqx8S',
+            'app_code': 'sEZSFHpqGqWcGX4gmWixlQ',
+            useCIT: false,
+            useHTTPS: true
         });
+        document.formatString = function format(value) {
+            var args = [];
+            for (var i = 1; i < arguments.length; i++) {
+                args[i - 1] = arguments[i];
+            }
+            return value.replace(/{(\d+)}/g, function (match, index) {
+                return typeof args[index] != 'undefined' ? args[index] : match;
+            });
+        }
+        document.viewModel = {
+            startPosition: [],
+            endPosition: [],
+            stops: [],
+            actualSights: [],
+            duration: 0,
+            hereMap: document.querySelector("#here-map"),
+            hereService: document.querySelector("#here-service")
+
+        }
+
+        var txtStart = document.querySelector("#txtStart");
+        var txtEnd = document.querySelector("#txtEnd");
+        var txtDuration = document.querySelector("#txtDuration");
+        txtStart.addEventListener("blur", function () {
+            if (this.value) {
+                var geocoder = document.platform.getGeocodingService(),
+                    parameters = {
+                        searchtext: this.value,
+                        gen: '8'
+                    };
+                geocoder.geocode(parameters,
+                    function(result) {
+                        if (result.Response.View.length > 0) {
+                            document.viewModel.startPosition[0] = result.Response.View[0].Result[0].Location.DisplayPosition.Latitude;
+                            document.viewModel.startPosition[1] = result.Response.View[0].Result[0].Location.DisplayPosition.Longitude;
+                            this.value = result.Response.View[0].Result[0].Location.Address.Label;
+                            document.viewModel.hereMap.moveMapToGeoCoord(document.viewModel.startPosition[0], document.viewModel.startPosition[1], -1);
+                            document.viewModel.startRouting();
+                        }
+                    }.bind(this), function(error) {
+
+                    });
+            }
+        });
+        txtStart.addEventListener("keyup", function (eventObject) {
+            if (eventObject.which === 13) {
+                if (this.blur) this.blur();
+                else this.onblur(eventObject);
+            }
+        });
+        txtEnd.addEventListener("blur", function () {
+            if (this.value) {
+                var geocoder = document.platform.getGeocodingService(),
+                    parameters = {
+                        searchtext: this.value,
+                        gen: '8'
+                    };
+                geocoder.geocode(parameters,
+                    function(result) {
+                        if (result.Response.View.length > 0) {
+                            document.viewModel.endPosition[0] = result.Response.View[0].Result[0].Location.DisplayPosition.Latitude;
+                            document.viewModel.endPosition[1] = result.Response.View[0].Result[0].Location.DisplayPosition.Longitude;
+                            this.value = result.Response.View[0].Result[0].Location.Address.Label;
+                            document.viewModel.hereMap.moveMapToGeoCoord(document.viewModel.endPosition[0], document.viewModel.endPosition[1], -1);
+                            document.viewModel.startRouting();
+                        }
+                    }.bind(this), function(error) {
+
+                    });
+            }
+        });
+        txtEnd.addEventListener("keyup", function (eventObject) {
+            if (eventObject.which === 13) {
+                if (this.blur) this.blur();
+                else this.onblur(eventObject);
+            }
+        });
+        txtDuration.addEventListener("blur", function () {
+            if (this.value !== "") {
+                var val = parseInt(this.value);
+                document.viewModel.duration = Math.max(val, 1);
+                document.viewModel.nextDay();
+            }
+        });
+        txtDuration.addEventListener("keyup", function (eventObject) {
+            if (eventObject.which === 13) {
+                if (this.blur) this.blur();
+                else this.onblur(eventObject);
+            }
+        });
+
+        this.document.viewModel.startRouting = function() {
+            if (document.viewModel.endPosition[0] && document.viewModel.startPosition[0]) {
+                var router = document.platform.getRoutingService(),
+                    parameters = {
+                        waypoint0: document.formatString("{0},{1}", document.viewModel.startPosition[0], document.viewModel.startPosition[1]),
+                        waypoint1: document.formatString("{0},{1}", document.viewModel.endPosition[0], document.viewModel.endPosition[1]),
+                        mode: 'fastest;car',
+                        representation: 'display',
+                        routeattributes: 'waypoints,summary,shape,legs',
+                        maneuverattributes: 'direction,action',
+                        departure: 'now'
+                    };
+
+                router.calculateRoute(parameters,
+                    function (result) {
+                        document.viewModel.hereMap.addRouteShapeToMap(result.response.route[0]);
+                    }, function(error) {
+                        alert(error);
+                    });
+            }
+        }
+        this.document.viewModel.nextDay = function() {
+            if (document.viewModel.endPosition[0] && document.viewModel.startPosition[0] && document.viewModel.duration > 0) {
+                var start = document.viewModel.stops.length > 0 ? document.viewModel.stops[document.viewModel.stops.length - 1] : document.viewModel.startPosition;
+                var end = document.viewModel.endPosition;
+                document.viewModel.hereService.getSights(start[0], start[1], end[0], end[1], document.viewModel.duration, document.viewModel.sightscb);
+
+            }
+        };
+        this.document.viewModel.sightscb = function (sights) {
+            document.viewModel.actualSights = sights;
+            var markers = [];
+            for (var s = 0; s < sights.length; s++) {
+                markers.push(new H.map.Marker(({ lat: sights[s].lat, lng: sights[s].lng })));
+            }
+            document.viewModel.hereMap.zoomIntoGroup(markers);
+        };
 
         var tabs = document.querySelector('paper-tabs');
         var list = document.querySelector('post-list');

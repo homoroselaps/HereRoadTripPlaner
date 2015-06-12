@@ -1,0 +1,37 @@
+<link rel="import" href="../components/polymer/polymer.html">
+<link rel="import" href="../components/core-ajax/core-ajax.html">
+<polymer-element name="here-service" attributes="">
+  <template>
+    <style>
+    :host {
+      display: none;
+    }
+    </style>
+      <core-ajax id="sights"
+                 on-core-response="{{sightsLoaded}}"
+                 on-core-error ="{{sightsError}}"
+                 handleas="json">
+      </core-ajax>
+  </template>
+  <script>
+      Polymer('here-service', {
+    created: function() {
+        this.sights = [];
+        this.sightscb = null;
+    },
+    sightsError: function() {
+        var testarr = [{ lat: 42.35805, lng: -71.0636 }, { lat: 38.8951, lng: -77.0366 }, { lat: 38.8951, lng: -77.0346 }, { lat: 38.2951, lng: -77.0366 }];
+        if (this.sightscb) this.sightscb(testarr);
+    },
+    sightsLoaded: function() {
+        // Make a copy of the loaded data
+        if (this.sightscb) this.sightscb(this.$.sights.response.slice(0));
+    },
+    getSights: function (lat1, lng1, lat2, lng2, duration, callback) {
+        this.$.sights.url = document.formatString("/getsights?lat1={0}&lng1={1}&lat2={2}&lng2={3}&duration={4}", lat1, lng1, lat2, lng2, duration);
+        this.sightscb = callback;
+        this.$.sights.go();
+    }
+  });
+  </script>
+</polymer-element>
