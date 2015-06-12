@@ -198,4 +198,4 @@ FakesAssemblies/
 # build folder
 backend/build
 backend/.idea
-backend/mysite/__pycache__
+*__pycache__
